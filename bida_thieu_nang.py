@@ -1,4 +1,4 @@
-import pygame, math, random
+import pygame, math
 
 class ball:
     def __init__(self, px, py, vx, vy, ax, ay, radius, mass, id, partition):
@@ -15,21 +15,8 @@ class ball:
         self.partition = partition
         self.partitions = [self.partition]
 
-WIDTH = 800
-HEIGHT = 600
-
-class Grid:
-    def __init__(self, gridsize):
-        self.gridsize = gridsize
-        self.row = HEIGHT/gridsize
-        self.col = WIDTH/gridsize
-        self.ball_list = list()
-
-    def addBall(self, x, y, r):
-        newBall = ball(x,y,0,0,0,0,r,r*10,len(self.ball_list), [x/self.gridsize, y/self.gridsize])
-        self.ball_list.append(newBall)
-
-
+WIDTH = 930
+HEIGHT = 504
 
 pygame.init()
 font = pygame.font.Font(None, 14)
@@ -41,16 +28,44 @@ class Game:
         self.selectball = None
         self.clicked = False
         self.screen = screen
-        self.force = 10.0
+        self.force = 15.0
+        self.friction = 1.1
         self.stop_threshold = 3.0
         self.selectball_pos = list()
         self.is_draw_line = False
-        self.gridsize = 20
-        for _ in range(100):
-            self.addball(random.randint(0,800), random.randint(0,600), 10)
+        self.ball_radius = 9
+        self.gridsize = self.ball_radius * 2
+        self.balls_color = [(255,255,255), (227,210,34), (44,50,212), (255,0,0),(202,70,212),(125,38,212),(38,191,92), (196,108,57), (0,0,0), (227,210,34),(44,50,212),(255,0,0),(202,70,212),(125,38,212),(38,191,92),(196,108,57)]
+        self.hole = [[ self.ball_radius/2+4, self.ball_radius/2+4],
+                     [ self.ball_radius/2+4, HEIGHT-self.ball_radius/2-4], 
+                     [ WIDTH/2-self.ball_radius/2, self.ball_radius/2+2],
+                     [ WIDTH/2-self.ball_radius/2, HEIGHT-self.ball_radius/2-2], 
+                     [ WIDTH-self.ball_radius/2-4, self.ball_radius/2+4], 
+                     [ WIDTH-self.ball_radius/2-4, HEIGHT-self.ball_radius/2-4]]
+        
+        self.clearTable()
+        
+    def clearTable(self):
+        self.ball_list.clear()
+        self.addball(728,242,self.ball_radius,len(self.ball_list))
+        self.addball(297,242,self.ball_radius,len(self.ball_list))
+        self.addball(282,232,self.ball_radius,len(self.ball_list))
+        self.addball(282,251,self.ball_radius,len(self.ball_list))
+        self.addball(266,225,self.ball_radius,len(self.ball_list))
+        self.addball(267,242,self.ball_radius,len(self.ball_list))
+        self.addball(266,260,self.ball_radius,len(self.ball_list))
+        self.addball(252,217,self.ball_radius,len(self.ball_list))
+        self.addball(252,234,self.ball_radius,len(self.ball_list))
+        self.addball(252,251,self.ball_radius,len(self.ball_list))
+        self.addball(252,268,self.ball_radius,len(self.ball_list))
+        self.addball(237,207,self.ball_radius,len(self.ball_list))
+        self.addball(236,226,self.ball_radius,len(self.ball_list))
+        self.addball(236,244,self.ball_radius,len(self.ball_list))
+        self.addball(236,261,self.ball_radius,len(self.ball_list))
+        self.addball(238,280,self.ball_radius,len(self.ball_list))
 
-    def addball(self, x, y, r):
-        newball = ball(x,y,0,0,0,0,r,r*10,len(self.ball_list), [x//self.gridsize, y//self.gridsize])
+    def addball(self, x, y, r, id):
+        newball = ball(x,y,0,0,0,0,r,r*10,id, [x//self.gridsize, y//self.gridsize])
         self.ball_list.append(newball)
 
     def update(self, elapse_time):
@@ -63,22 +78,13 @@ class Game:
         if mouse_event[0] and not self.clicked:
             for ball in self.ball_list:
                 if (is_point_in_ball(ball.px, ball.py, ball.radius, mouse_pos[0], mouse_pos[1])):
-                    if ball.vx == 0 and ball.vy == 0:
-                        self.selectball = ball
-                        self.selectball_pos = [self.selectball.px, self.selectball.py]
-                        self.is_draw_line = True
-                        self.clicked = True
-                        break
-
-        if mouse_event[2] and not self.clicked:
-            self.selectball_pos = None
-            for ball in self.ball_list:
-                if (is_point_in_ball(ball.px, ball.py, ball.radius, mouse_pos[0], mouse_pos[1])):
-                    ball.vx = 0
-                    ball.vy = 0
-                    self.selectball = ball
-                    self.clicked = True
-                    break
+                    if ball == self.ball_list[0]:
+                        if ball.vx == 0 and ball.vy == 0:
+                            self.selectball = ball
+                            self.selectball_pos = [self.selectball.px, self.selectball.py]
+                            self.is_draw_line = True
+                            self.clicked = True
+                            break
 
         if mouse_event[0]:
             if self.is_draw_line:
@@ -90,7 +96,6 @@ class Game:
                 self.selectball.px = mouse_pos[0]
                 self.selectball.py = mouse_pos[1]
 
-        # Apply force
         if not mouse_event[0] and self.clicked:
             try:
                 if self.selectball != None:
@@ -103,17 +108,13 @@ class Game:
             except:
                 pass
 
-        if not mouse_event[2] and not mouse_event[0] and self.clicked:
-            self.selectball = None
-            self.clicked = False
-
         vecCollidingPairs = list()
 
         for ball in self.ball_list:
             if not ball.is_move:
                 continue
-            ball.ax = -ball.vx * 0.8
-            ball.ay = -ball.vy * 0.8
+            ball.ax = -ball.vx * self.friction
+            ball.ay = -ball.vy * self.friction
 
             ball.vx += ball.ax * elapse_time
             ball.vy += ball.ay * elapse_time
@@ -126,20 +127,23 @@ class Game:
                 for y in range(-1,2):
                     ball.partitions.append([ball.partition[0]+x, ball.partition[1]+y])
 
-            if ball.px < 0:
-                ball.px += WIDTH
-            if ball.px >= WIDTH:
-                ball.px -= WIDTH
-            if ball.py < 0:
-                ball.py += HEIGHT
-            if ball.py >= HEIGHT:
-                ball.py -= HEIGHT
+            if ball.px < self.ball_radius or ball.px > WIDTH-self.ball_radius:
+                ball.vx = -ball.vx
+            if ball.py < self.ball_radius or ball.py > HEIGHT-self.ball_radius:
+                ball.vy = -ball.vy
 
             if math.fabs(math.pow(ball.vx,2)+math.pow(ball.vy,2) < self.stop_threshold):
                 ball.vx = 0
                 ball.vy = 0
                 ball.is_move = False
-            
+
+            for hole in self.hole:
+                distance = math.sqrt(math.pow(ball.px-hole[0],2)+math.pow(ball.py-hole[1],2))
+                if distance <= self.ball_radius * 1.2:
+                    if ball == self.ball_list[0]:
+                        continue
+                    self.ball_list.remove(ball)
+
         for ball in self.ball_list:
             if not ball.is_move:
                 continue
@@ -156,13 +160,6 @@ class Game:
                         ball.py -= overlap * (ball.py - target.py) / distance
                         target.px += overlap * (ball.px - target.px) / distance
                         target.py += overlap * (ball.py - target.py) / distance
-                        ball.partition[0] = ball.px//self.gridsize
-                        ball.partition[1] = ball.py//self.gridsize
-                        target.partition[0] = ball.px//self.gridsize
-                        target.partition[1] = ball.py//self.gridsize
-                        for x in range(-1,2):
-                            for y in range(-1,2):
-                                ball.partitions.append([ball.partition[0]+x, ball.partition[1]+y])
 
         for c in vecCollidingPairs:
             ball_1 = c[0]
@@ -183,25 +180,28 @@ class Game:
             ball_2.vx = tx * dpTan2 + nx * m2
             ball_2.vy = ty * dpTan2 + ny * m2
 
+        for hole in self.hole:
+            pygame.draw.circle(self.screen, (39,39,39), (hole[0],hole[1]), self.ball_radius+3)
+
         for ball in self.ball_list:
             if ball.id == 0:
-                pygame.draw.circle(self.screen, (255,255,255), (ball.px, ball.py), ball.radius)
+                pygame.draw.circle(self.screen, self.balls_color[ball.id], (ball.px, ball.py), ball.radius)
                 pygame.draw.circle(self.screen, (255,0,0), (ball.px, ball.py), 1.5)
             else:
-                pygame.draw.circle(self.screen, (255,0,0), (ball.px, ball.py), ball.radius)
+                text_surface = font.render(f'{ball.id}', True, (255, 255, 255)).convert_alpha()
+                text_rect = text_surface.get_rect()
+                text_rect.center = (ball.px, ball.py)
+                pygame.draw.circle(self.screen, self.balls_color[ball.id], (ball.px, ball.py), ball.radius)
+                self.screen.blit(text_surface, text_rect)
             pygame.draw.circle(self.screen, (0,0,0), (ball.px, ball.py), ball.radius, 1)
-            # for rect in ball.partitions:
-            #     pygame.draw.rect(self.screen, (0,0,255),(rect[0]*self.gridsize, rect[1]*self.gridsize, self.gridsize, self.gridsize), 1)
             ball.partitions.clear()
-            
-            
 
 game = Game(screen)
 
 running = True
 
 clock = pygame.time.Clock()
-FPS = 120
+FPS = 240
 
 while running:
     clock.tick(FPS)
@@ -209,6 +209,10 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                game.clearTable()
+
     screen.fill((57,130,49))
     game.update(dt)
     pygame.display.update()
