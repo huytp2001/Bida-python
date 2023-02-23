@@ -1,4 +1,4 @@
-import pygame, math
+import pygame, math, random
 
 class ball:
     def __init__(self, px, py, vx, vy, ax, ay, radius, mass, id, partition):
@@ -15,25 +15,27 @@ class ball:
         self.partition = partition
         self.partitions = [self.partition]
 
-WIDTH = 930
-HEIGHT = 504
+WIDTH = 1240
+HEIGHT = 672
 
 pygame.init()
 font = pygame.font.Font(None, 14)
+score_font = pygame.font.Font(None, 256)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 class Game:
     def __init__(self, screen):
+        self.mode = True 
         self.ball_list = list()
         self.selectball = None
         self.clicked = False
         self.screen = screen
         self.force = 15.0
-        self.friction = 1.1
-        self.stop_threshold = 3.0
+        self.friction = 1.2
+        self.stop_threshold = 5.0
         self.selectball_pos = list()
         self.is_draw_line = False
-        self.ball_radius = 9
+        self.ball_radius = 12
         self.gridsize = self.ball_radius * 2
         self.balls_color = [(255,255,255), (227,210,34), (44,50,212), (255,0,0),(202,70,212),(125,38,212),(38,191,92), (196,108,57), (0,0,0), (227,210,34),(44,50,212),(255,0,0),(202,70,212),(125,38,212),(38,191,92),(196,108,57)]
         self.hole = [[ self.ball_radius/2+4, self.ball_radius/2+4],
@@ -42,36 +44,62 @@ class Game:
                      [ WIDTH/2-self.ball_radius/2, HEIGHT-self.ball_radius/2-2], 
                      [ WIDTH-self.ball_radius/2-4, self.ball_radius/2+4], 
                      [ WIDTH-self.ball_radius/2-4, HEIGHT-self.ball_radius/2-4]]
-        
+        self.score = int(0)
+        self.hitOrder = [False, False]
+
         self.clearTable()
         
     def clearTable(self):
-        self.ball_list.clear()
-        self.addball(728,242,self.ball_radius,len(self.ball_list))
-        self.addball(297,242,self.ball_radius,len(self.ball_list))
-        self.addball(282,232,self.ball_radius,len(self.ball_list))
-        self.addball(282,251,self.ball_radius,len(self.ball_list))
-        self.addball(266,225,self.ball_radius,len(self.ball_list))
-        self.addball(267,242,self.ball_radius,len(self.ball_list))
-        self.addball(266,260,self.ball_radius,len(self.ball_list))
-        self.addball(252,217,self.ball_radius,len(self.ball_list))
-        self.addball(252,234,self.ball_radius,len(self.ball_list))
-        self.addball(252,251,self.ball_radius,len(self.ball_list))
-        self.addball(252,268,self.ball_radius,len(self.ball_list))
-        self.addball(237,207,self.ball_radius,len(self.ball_list))
-        self.addball(236,226,self.ball_radius,len(self.ball_list))
-        self.addball(236,244,self.ball_radius,len(self.ball_list))
-        self.addball(236,261,self.ball_radius,len(self.ball_list))
-        self.addball(238,280,self.ball_radius,len(self.ball_list))
+        if self.mode:
+            self.ball_list.clear()
+            self.addball(970,325,self.ball_radius,len(self.ball_list))
+            self.addball(389,325,self.ball_radius,len(self.ball_list))
+            self.addball(368,310,self.ball_radius,len(self.ball_list)) 
+            self.addball(368,334,self.ball_radius,len(self.ball_list))
+            self.addball(347,297,self.ball_radius,len(self.ball_list)) 
+            self.addball(347,321,self.ball_radius,len(self.ball_list))
+            self.addball(347,345,self.ball_radius,len(self.ball_list))
+            self.addball(326,284,self.ball_radius,len(self.ball_list)) 
+            self.addball(326,308,self.ball_radius,len(self.ball_list))
+            self.addball(326,332,self.ball_radius,len(self.ball_list))
+            self.addball(326,356,self.ball_radius,len(self.ball_list))
+            self.addball(305,274,self.ball_radius,len(self.ball_list))  
+            self.addball(305,298,self.ball_radius,len(self.ball_list))
+            self.addball(305,322,self.ball_radius,len(self.ball_list))
+            self.addball(305,346,self.ball_radius,len(self.ball_list))
+            self.addball(305,370,self.ball_radius,len(self.ball_list)) 
+        else:
+            self.ball_list.clear()
+            self.addball(970,325,self.ball_radius,len(self.ball_list))
+            self.addball(305,178,self.ball_radius,len(self.ball_list))
+            self.addball(305,466,self.ball_radius,len(self.ball_list))
+            self.hitOrder[0] = False
+            self.hitOrder[1] = False
+
+    def changeMode(self):
+        self.mode = not self.mode
 
     def addball(self, x, y, r, id):
         newball = ball(x,y,0,0,0,0,r,r*10,id, [x//self.gridsize, y//self.gridsize])
         self.ball_list.append(newball)
 
+    def isBallOverlap(self, _ball:ball):
+        for ball in self.ball_list:
+            if ball == _ball:
+                continue
+            if abs((_ball.px - ball.px)*(_ball.px - ball.px) + (_ball.py - ball.py)*(_ball.py - ball.py)) <= (ball.radius + ball.radius)*(ball.radius + ball.radius):
+                return True
+        return False
+
     def update(self, elapse_time):
         DoballsOverlap = lambda x1, y1, r1, x2, y2, r2: abs((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)) <= (r1 + r2)*(r1 + r2)
         is_point_in_ball = lambda x1, y1, r1, px, py: ((x1 - px)**2 + (y1 - py)**2) < r1**2
         
+        score_surface = score_font.render(f'{self.score}', True, (116,116,116)).convert_alpha()
+        text_rect = score_surface.get_rect()
+        text_rect.center = (WIDTH/2, HEIGHT/2)
+        self.screen.blit(score_surface, text_rect)
+
         mouse_event = pygame.mouse.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
 
@@ -102,6 +130,7 @@ class Game:
                     self.selectball.is_move = True
                     self.selectball.vx = self.force * (self.selectball_pos[0] - mouse_pos[0])
                     self.selectball.vy = self.force * (self.selectball_pos[1] - mouse_pos[1])
+                    self.isHit = True
                 self.selectball = None
                 self.clicked = False
                 self.is_draw_line = False
@@ -133,16 +162,33 @@ class Game:
                 ball.vy = -ball.vy
 
             if math.fabs(math.pow(ball.vx,2)+math.pow(ball.vy,2) < self.stop_threshold):
+                if ball == self.ball_list[0]:
+                    self.hitOrder[0] = False
+                    self.hitOrder[1] = False
                 ball.vx = 0
                 ball.vy = 0
                 ball.is_move = False
 
-            for hole in self.hole:
-                distance = math.sqrt(math.pow(ball.px-hole[0],2)+math.pow(ball.py-hole[1],2))
-                if distance <= self.ball_radius * 1.2:
-                    if ball == self.ball_list[0]:
-                        continue
-                    self.ball_list.remove(ball)
+            if self.hitOrder[0] and self.hitOrder[1]:
+                self.score += 1
+                self.hitOrder[0] = False
+                self.hitOrder[1] = False
+
+            if self.mode:
+                for hole in self.hole:
+                    distance = math.sqrt(math.pow(ball.px-hole[0],2)+math.pow(ball.py-hole[1],2))
+                    if distance <= self.ball_radius * 1.2:
+                        if ball == self.ball_list[0]:
+                            ball.px = random.randint(self.ball_radius,WIDTH-self.ball_radius)
+                            ball.py = random.randint(self.ball_radius,HEIGHT-self.ball_radius)
+                            while self.isBallOverlap(ball):
+                                ball.px = random.randint(0,WIDTH)
+                                ball.py = random.randint(0,HEIGHT)
+                            ball.vx = ball.vy = 0
+                            continue
+                        self.ball_list.remove(ball)
+
+
 
         for ball in self.ball_list:
             if not ball.is_move:
@@ -164,6 +210,12 @@ class Game:
         for c in vecCollidingPairs:
             ball_1 = c[0]
             ball_2 = c[1]
+            if not self.mode:
+                if ball_1 == self.ball_list[0] and ball_2 == self.ball_list[1]:
+                    self.hitOrder[0] = True
+                if ball_1 == self.ball_list[0] and ball_2 == self.ball_list[2]:
+                    self.hitOrder[1] = True
+                
             distance = math.sqrt(math.pow(ball_1.px-ball_2.px,2)+math.pow(ball_1.py-ball_2.py,2))
             nx = (ball_2.px - ball_1.px) / distance
             ny = (ball_2.py - ball_1.py) / distance
@@ -180,8 +232,9 @@ class Game:
             ball_2.vx = tx * dpTan2 + nx * m2
             ball_2.vy = ty * dpTan2 + ny * m2
 
-        for hole in self.hole:
-            pygame.draw.circle(self.screen, (39,39,39), (hole[0],hole[1]), self.ball_radius+3)
+        if self.mode:
+            for hole in self.hole:
+                pygame.draw.circle(self.screen, (39,39,39), (hole[0],hole[1]), self.ball_radius+3)
 
         for ball in self.ball_list:
             if ball.id == 0:
@@ -195,13 +248,14 @@ class Game:
                 self.screen.blit(text_surface, text_rect)
             pygame.draw.circle(self.screen, (0,0,0), (ball.px, ball.py), ball.radius, 1)
             ball.partitions.clear()
+        
 
 game = Game(screen)
 
 running = True
 
 clock = pygame.time.Clock()
-FPS = 240
+FPS = 480
 
 while running:
     clock.tick(FPS)
@@ -212,8 +266,15 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
                 game.clearTable()
+            if event.key == pygame.K_c:
+                game.changeMode()
+                game.clearTable()
+            if event.key == pygame.K_p:
+                for _ball in game.ball_list:
+                    print(_ball.px, _ball.py)
 
     screen.fill((57,130,49))
+    
     game.update(dt)
     pygame.display.update()
 pygame.quit()
